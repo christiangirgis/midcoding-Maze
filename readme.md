@@ -1,474 +1,349 @@
-# Maze Escape Project
+# Maze Escape Walkthrough
 
-This guide walks you through the code they need to write, one piece at a time.
+This guide matches the structure and variable names in the demo file `mazegame.py`.
 
-Important rule: do not copy a full completed game from anywhere.
-Build and test each step before moving on.
+Goal: help students finish missing code blocks without jumping to a full copy/paste solution first.
 
-## Learning Goal
+Use this process in class:
 
-Build a top-down maze game in Pygame where the player:
+1. Reveal one block at a time.
+2. Run after each block.
+3. Fix one bug before moving on.
 
-- moves through a maze,
-- collects a key,
-- reaches the exit after collecting the key.
+---
 
-## What You Will Practice
+## What Students Are Building
 
-- Variables and constants
-- Lists of strings (grid maps)
-- Loops and conditionals
-- Functions
-- Collision with rectangles
-- Game state logic
+A top-down maze game where the player:
+
+- moves with arrow keys or WASD,
+- collects the key,
+- then reaches the exit to win,
+- and can restart with `R`.
+
+---
 
 ## Setup
 
-1. Install Python 3 and Pygame.
-2. Create a file named maze_escape.py.
-3. Run the file after every step.
-
-Install command:
+1. Install Python 3.
+2. Install Pygame:
 
 ```bash
 pip install pygame
 ```
 
----
+3. Run the game file:
 
-## Step 1: Create the game window
-
-Write just enough code to open and close a Pygame window.
-
-Write this structure:
-
-```python
-import pygame
-import sys
-
-pygame.init()
-
-WIDTH = 800
-HEIGHT = 600
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-clock = pygame.time.Clock()
-
-running = True
-while running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-
-    screen.fill((0, 0, 0))
-    pygame.display.flip()
-    clock.tick(60)
-
-pygame.quit()
-sys.exit()
+```bash
+python3 mazegame.py
 ```
-
-Checkpoint:
-
-- Window opens.
-- Clicking the close button exits cleanly.
 
 ---
 
-## Step 2: Add constants and colors
+## Starter Structure Students Should Already Have
 
-At the top of the file, add constants so values are easy to change later.
+Students should already have:
 
-Students should define:
+- imports,
+- constants,
+- `level_map`,
+- global state variables,
+- main game loop shell.
 
-- TILE_SIZE
-- FPS
-- 4 to 6 color tuples (wall, floor, player, key, exit)
-
-Example pattern:
-
-```python
-TILE_SIZE = 40
-FPS = 60
-
-WALL_COLOR = (100, 100, 100)
-FLOOR_COLOR = (30, 30, 30)
-```
-
-Checkpoint:
-
-- No magic numbers repeated everywhere.
+If they are missing major structure, have them copy the top-level frame first, then complete TODO blocks below.
 
 ---
 
-## Step 3: Build the maze map
+## Missing Block 1: `load_level()`
 
-Create a list of strings. Each character means one tile type.
+Purpose: scan `level_map` and build walls, key, exit, and player spawn.
 
-Required tile letters:
-
-- W = wall
-- P = player start
-- K = key
-- E = exit
-- . = empty space
-
-Template students can fill in:
+Fill-in code:
 
 ```python
-level_map = [
-    "WWWWWWWWWW",
-    "WP.......W",
-    "W.WWWW...W",
-    "W....W...W",
-    "W..K.W.E.W",
-    "WWWWWWWWWW",
-]
+def load_level():
+    """Read the map and create wall/key/exit rectangles and player spawn."""
+    global walls, key_rect, exit_rect
+    global player_x, player_y, start_x, start_y
+
+    walls = []
+    key_rect = None
+    exit_rect = None
+
+    for row_index, row in enumerate(level_map):
+        for col_index, tile in enumerate(row):
+            x = col_index * TILE_SIZE
+            y = row_index * TILE_SIZE
+
+            if tile == "W":
+                walls.append(pygame.Rect(x, y, TILE_SIZE, TILE_SIZE))
+            elif tile == "P":
+                player_x = x + (TILE_SIZE - player_size) // 2
+                player_y = y + (TILE_SIZE - player_size) // 2
+                start_x = player_x
+                start_y = player_y
+            elif tile == "K":
+                key_rect = pygame.Rect(x + 8, y + 8, TILE_SIZE - 16, TILE_SIZE - 16)
+            elif tile == "E":
+                exit_rect = pygame.Rect(x + 4, y + 4, TILE_SIZE - 8, TILE_SIZE - 8)
 ```
 
-Teacher note: encourage them to design their own map after first test.
+Quick check:
 
-Checkpoint:
-
-- Exactly one P, one K, and one E.
-- Walls around outer border.
+- `walls` is not empty.
+- player starts on `P`.
+- key and exit appear in the right tiles.
 
 ---
 
-## Step 4: Draw the maze tiles
+## Missing Block 2: `reset_game()`
 
-Use nested loops over rows and columns.
+Purpose: replay without restarting Python.
 
-Students need this thinking:
-
-- row index = y tile position
-- col index = x tile position
-- x = col index * TILE_SIZE
-- y = row index * TILE_SIZE
-
-Skeleton logic:
+Fill-in code:
 
 ```python
-for row_index, row in enumerate(level_map):
-    for col_index, tile in enumerate(row):
-        x = col_index * TILE_SIZE
-        y = row_index * TILE_SIZE
+def reset_game():
+    """Reset key state and player position so the game can be replayed."""
+    global player_x, player_y, has_key, game_state, message
 
-        # draw floor first
-        # if tile is W, draw wall over floor
-        # if tile is K or E, draw those markers
+    player_x = start_x
+    player_y = start_y
+    has_key = False
+    game_state = "playing"
+    message = "Find the key, then reach the exit."
 ```
 
-Checkpoint:
+Quick check:
 
-- Maze appears in the correct grid shape.
+- after winning, press `R` and game returns to start state.
 
 ---
 
-## Step 5: Find player start from P
+## Missing Block 3: `draw_maze()`
 
-Do not hard-code player coordinates.
-Scan map once at startup to find P.
+Purpose: draw floor first, then walls, exit, and key.
 
-Students create:
-
-- player_x
-- player_y
-- player_size
-
-Pattern:
+Fill-in code:
 
 ```python
-for row_index, row in enumerate(level_map):
-    for col_index, tile in enumerate(row):
-        if tile == "P":
-            player_x = col_index * TILE_SIZE
-            player_y = row_index * TILE_SIZE
+def draw_maze():
+    """Draw floor first, then walls, exit, and key if it has not been collected."""
+    screen.fill(BLACK)
+
+    for row_index, row in enumerate(level_map):
+        for col_index, _tile in enumerate(row):
+            x = col_index * TILE_SIZE
+            y = row_index * TILE_SIZE
+            pygame.draw.rect(screen, FLOOR_COLOR, pygame.Rect(x, y, TILE_SIZE, TILE_SIZE))
+
+    for wall in walls:
+        pygame.draw.rect(screen, WALL_COLOR, wall)
+
+    if exit_rect is not None:
+        pygame.draw.rect(screen, EXIT_COLOR, exit_rect)
+
+    if key_rect is not None and not has_key:
+        pygame.draw.rect(screen, KEY_COLOR, key_rect)
 ```
 
-Checkpoint:
+Quick check:
 
-- Player spawns on the P tile.
+- key disappears after collection.
+- exit remains visible.
 
 ---
 
-## Step 6: Draw player rectangle
+## Missing Block 4: `move_player(keys)`
 
-Add a player draw step each frame.
+Purpose: move and stop wall clipping using rollback collision.
+
+Fill-in code:
 
 ```python
-player_rect = pygame.Rect(player_x, player_y, player_size, player_size)
-pygame.draw.rect(screen, PLAYER_COLOR, player_rect)
+def move_player(keys):
+    """Move in four directions and roll back movement if a wall collision occurs."""
+    global player_x, player_y
+
+    old_x, old_y = player_x, player_y
+
+    if keys[pygame.K_LEFT] or keys[pygame.K_a]:
+        player_x -= player_speed
+    if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
+        player_x += player_speed
+    if keys[pygame.K_UP] or keys[pygame.K_w]:
+        player_y -= player_speed
+    if keys[pygame.K_DOWN] or keys[pygame.K_s]:
+        player_y += player_speed
+
+    player_rect = pygame.Rect(player_x, player_y, player_size, player_size)
+    for wall in walls:
+        if player_rect.colliderect(wall):
+            player_x, player_y = old_x, old_y
+            break
 ```
 
-Checkpoint:
+Quick check:
 
-- Player appears every frame.
+- player moves in all directions.
+- player cannot pass through walls.
 
 ---
 
-## Step 7: Add movement input
+## Missing Block 5: key + exit collision functions
 
-Use arrow keys or WASD.
-Start with movement only, no collision.
+Purpose: collect key once, and win only after key.
 
-Pattern:
-
-```python
-keys = pygame.key.get_pressed()
-
-if keys[pygame.K_LEFT]:
-    player_x -= speed
-if keys[pygame.K_RIGHT]:
-    player_x += speed
-if keys[pygame.K_UP]:
-    player_y -= speed
-if keys[pygame.K_DOWN]:
-    player_y += speed
-```
-
-Checkpoint:
-
-- Player moves in all four directions.
-
----
-
-## Step 8: Store wall rectangles
-
-When reading the map, create a list named walls.
-For each W tile, append a Rect.
-
-Pattern:
+Fill-in code:
 
 ```python
-walls = []
+def check_key_collision(player_rect):
+    """Collect the key once when the player touches it."""
+    global has_key, message
 
-# inside map loop
-if tile == "W":
-    wall_rect = pygame.Rect(x, y, TILE_SIZE, TILE_SIZE)
-    walls.append(wall_rect)
-```
+    if key_rect is not None and not has_key and player_rect.colliderect(key_rect):
+        has_key = True
+        message = "Key collected! Reach the exit."
 
-Checkpoint:
 
-- walls list has many rectangles.
+def check_exit_collision(player_rect):
+    """Allow winning only after the key has been collected."""
+    global game_state, message
 
----
+    if exit_rect is None or not player_rect.colliderect(exit_rect):
+        return
 
-## Step 9: Block movement through walls
-
-Classic beginner collision method:
-
-1. Save old position.
-2. Apply movement.
-3. Build player rect at new position.
-4. If colliding with any wall, go back to old position.
-
-Pattern:
-
-```python
-old_x, old_y = player_x, player_y
-
-# move player using keys
-
-player_rect = pygame.Rect(player_x, player_y, player_size, player_size)
-for wall in walls:
-    if player_rect.colliderect(wall):
-        player_x, player_y = old_x, old_y
-        break
-```
-
-Checkpoint:
-
-- Player cannot pass through walls.
-
----
-
-## Step 10: Add key collection logic
-
-Track whether key is collected.
-
-Required variable:
-
-```python
-has_key = False
-```
-
-When loading map, create a key_rect for K.
-Each frame, check if player touches key_rect.
-If yes:
-
-- has_key becomes True
-- stop drawing key
-
-Collision pattern:
-
-```python
-if not has_key and player_rect.colliderect(key_rect):
-    has_key = True
-```
-
-Checkpoint:
-
-- Key disappears after pickup.
-
----
-
-## Step 11: Add exit logic with condition
-
-Create exit_rect from E.
-Player should win only if touching exit and has_key is True.
-
-Pattern:
-
-```python
-if player_rect.colliderect(exit_rect):
     if has_key:
         game_state = "win"
+        message = "You escaped!"
     else:
-        message = "Find the key first"
+        message = "Find the key first."
 ```
 
-Checkpoint:
+Quick check:
 
-- Exit does nothing before key.
-- Exit wins after key.
+- touching exit before key shows warning.
+- touching exit after key wins.
 
 ---
 
-## Step 12: Add game states
+## Missing Block 6: player and HUD drawing
 
-Use one variable to control screens.
+Purpose: draw player and status text every frame.
 
-Suggested values:
+Fill-in code:
 
-- playing
-- win
+```python
+def draw_player():
+    """Draw and return the player rectangle for collision checks."""
+    player_rect = pygame.Rect(player_x, player_y, player_size, player_size)
+    pygame.draw.rect(screen, PLAYER_COLOR, player_rect)
+    return player_rect
 
-Pattern:
+
+def draw_hud():
+    """Show key status and current game message below the maze."""
+    key_text = "Key: Collected" if has_key else "Key: Not Found"
+    maze_pixel_height = len(level_map) * TILE_SIZE
+    hud_y = min(maze_pixel_height + 8, HEIGHT - 28)
+
+    key_surface = font.render(key_text, True, WHITE)
+    msg_surface = font.render(message, True, WHITE)
+    screen.blit(key_surface, (12, hud_y))
+    screen.blit(msg_surface, (220, hud_y))
+```
+
+Quick check:
+
+- key status text changes.
+- message updates during play.
+
+---
+
+## Missing Block 7: win screen
+
+Purpose: show simple victory screen and restart hint.
+
+Fill-in code:
+
+```python
+def draw_win_screen():
+    """Draw a simple win screen with restart instructions."""
+    screen.fill(BLACK)
+    title = font.render("You escaped!", True, EXIT_COLOR)
+    prompt = font.render("Press R to restart or ESC to quit", True, WHITE)
+    screen.blit(title, (WIDTH // 2 - title.get_width() // 2, HEIGHT // 2 - 30))
+    screen.blit(prompt, (WIDTH // 2 - prompt.get_width() // 2, HEIGHT // 2 + 10))
+```
+
+Quick check:
+
+- win screen replaces gameplay render.
+- `R` restarts, `ESC` quits.
+
+---
+
+## Missing Block 8: main loop wiring
+
+Purpose: connect all functions in the right order.
+
+Critical sequence in `playing` state:
+
+1. read keys
+2. move player
+3. draw maze
+4. draw player and get rect
+5. check key collision
+6. check exit collision
+7. draw HUD
+
+Reference wiring:
 
 ```python
 if game_state == "playing":
-    # normal update and draw
+    keys = pygame.key.get_pressed()
+    move_player(keys)
+
+    draw_maze()
+    player_rect = draw_player()
+    check_key_collision(player_rect)
+    check_exit_collision(player_rect)
+    draw_hud()
+
 elif game_state == "win":
-    # draw win screen text
+    draw_win_screen()
 ```
 
-Checkpoint:
-
-- Win screen appears and gameplay pauses.
+If this order is changed, behavior can feel wrong (for example, stale collision checks or delayed HUD updates).
 
 ---
 
-## Step 13: Add restart
+## Debug Checklist for Students
 
-Create a reset_game() function.
-Reset:
+If their game is broken, check these first:
 
-- player position
-- has_key
-- game_state
-- message text
-
-Handle key press R during win state.
-
-Pattern:
-
-```python
-if event.type == pygame.KEYDOWN:
-    if game_state == "win" and event.key == pygame.K_r:
-        reset_game()
-```
-
-Checkpoint:
-
-- Player can replay without restarting Python.
+1. Forgot `global` in functions that modify game state.
+2. Typo in tile letters (`W`, `P`, `K`, `E`).
+3. `load_level()` never called before main loop.
+4. Collision checks run before `player_rect` is created.
+5. Drawing key even after `has_key` becomes `True`.
+6. Restart handler not limited to `win` state.
 
 ---
 
-## Step 14: Add text HUD
+## Suggested Grading Targets
 
-Display at least:
-
-- key status
-- current instruction message
-
-Students can use pygame.font.SysFont(None, size).
-
-Suggested messages:
-
-- Key: Not Found
-- Key: Collected
-- Find the key, then reach the exit
-- You escaped
-
-Checkpoint:
-
-- Text updates based on gameplay events.
+- Game runs without crashing.
+- Player movement works (arrows and/or WASD).
+- Walls block movement.
+- Key collects once and disappears.
+- Exit requires key.
+- Win screen appears.
+- Restart works with `R`.
+- Student can explain each function's purpose.
 
 ---
 
-## Step 15: Refactor into functions
+## Teacher Use Tip
 
-Before adding extra features, organize code into functions.
-
-Recommended function list:
-
-- load_level()
-- draw_maze()
-- move_player(keys)
-- check_key_collision(player_rect)
-- check_exit_collision(player_rect)
-- draw_hud()
-- reset_game()
-
-Teacher tip: students should move one chunk at a time and test after each move.
-
----
-
-## Extension Ideas (After Base Game Works)
-
-Pick 2 to 3:
-
-- Add a timer.
-- Add a second key.
-- Add a locked door tile D.
-- Add moving enemies.
-- Add multiple levels.
-- Replace rectangles with images.
-- Add sounds and music.
-
----
-
-## Required Student Comments
-
-Students must comment these ideas in their own words:
-
-- How the map encoding works (W, P, K, E, .)
-- How movement is read from keyboard
-- How wall collision rollback works
-- How key collection changes game state
-- How win condition is checked
-
-Rule: comments explain why, not just what.
-
----
-
-## Grading Checklist
-
-- Window opens and closes correctly
-- Maze draws correctly
-- Player starts on P
-- Player moves in 4 directions
-- Walls block movement
-- Key can be collected
-- Exit only wins after key
-- Win screen appears
-- Restart works
-- Code is organized and commented
-
----
-
-## Teaching Note
-
-This document intentionally avoids giving one full final script.
-Students should assemble the game step by step, testing each section as they code.
+If students still freeze on blanks, provide function headers and docstrings first, then ask them to fill only the internal logic lines. This keeps cognitive load lower while preserving problem-solving.
