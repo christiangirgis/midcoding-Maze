@@ -1,4 +1,4 @@
-# Maze Escape Project
+# Maze Escape Project`
 
 This guide walks you through the code they need to write, one piece at a time.
 
